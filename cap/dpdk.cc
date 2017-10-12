@@ -17,7 +17,8 @@ DpdkRte::~DpdkRte()
 
 }
 
-DpdkRte* DpdkRte::Instance() {
+DpdkRte* DpdkRte::Instance()
+{
     std::lock_guard<std::mutex> lock(mutex_);
     if (rte_ == nullptr) {
         rte_ = new DpdkRte;
@@ -25,7 +26,8 @@ DpdkRte* DpdkRte::Instance() {
     return rte_;
 }
 
-int DpdkRte::RteInit(int argc, char *argv[]) {
+int DpdkRte::RteInit(int argc, char *argv[])
+{
     int ret = rte_eal_init(argc, argv);
     if (ret < 0) rte_exit(EXIT_FAILURE, "Invalid EAL parameters\n");
     cap_core_num = 2;
@@ -44,7 +46,7 @@ int DpdkRte::PortsInit()
             unsigned n = (port->RxRings() * port->RxDesc() + port->TxRings() * port->TxDesc())
                          * cap_core_num + 1024;
             RteMemPoolPtr mbuf_pool = rte_pktmbuf_pool_create("DpdkRte_MBUF_POOL", n,
-                                        MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, socketid);
+                                      MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, socketid);
             if (mbuf_pool == NULL) {
                 rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
             }
@@ -55,14 +57,18 @@ int DpdkRte::PortsInit()
     }
 
     for (std::vector<DpdkPort*>::iterator x = ports_.begin(); x != ports_.end(); x++) {
-        (*x)->Setup(ports_mempools_[(*x)->SocketId()]);
+        int rt = (*x)->Setup(ports_mempools_[(*x)->SocketId()]);
+        if (rt != 0) {
+            rte_exit(EXIT_FAILURE, "fail to get port name \n");
+        }
     }
     return 0;
 }
 
-void DpdkRte::PrintInfo() {
+void DpdkRte::PrintInfo()
+{
     printf("core_num = %d\n", core_num);
-    printf("port_num = %d\n", port_num);    
+    printf("port_num = %d\n", port_num);
 }
 
 DpdkPort::DpdkPort(uint8_t port_id, uint16_t rx_rings, uint16_t tx_rings)
@@ -90,11 +96,11 @@ DpdkPort::DpdkPort(uint8_t port_id, uint16_t rx_rings, uint16_t tx_rings)
 
     socket_id_ = rte_eth_dev_socket_id(port_id_);
     core_id_  = rte_lcore_id();
-    printf("port_id_ = %d, socket_id_ = %d, core_id_ = %d\n", 
-            port_id_,
-            socket_id_,
-            core_id_
-            );
+    printf("port_id_ = %d, socket_id_ = %d, core_id_ = %d\n",
+           port_id_,
+           socket_id_,
+           core_id_
+          );
     rte_eth_dev_info_get(1, &dev_info_);
 }
 
@@ -103,7 +109,7 @@ DpdkPort::~DpdkPort()
 
 }
 
-int DpdkPort::Setup(struct rte_mempool* mbuf_pool)
+int DpdkPort::Setup(RteMemPoolPtr mbuf_pool)
 {
     int ret = 0;
     if (rx_rings_ > 1) {
@@ -115,14 +121,14 @@ int DpdkPort::Setup(struct rte_mempool* mbuf_pool)
 
     ret = rte_eth_dev_configure(port_id_, rx_rings_, tx_rings_, &port_conf_);
     if (ret) {
-        //RTE_LOG(ERR, DPDKCAP, "rte_eth_dev_configure(...): %s\n", rte_strerror(-ret));
+        //RTE_LOG(ERR, "x", "rte_eth_dev_configure(...): %s\n", rte_strerror(-ret));
         return ret;
     }
 
     for (int q = 0; q < rx_rings_; q++) {
         ret = rte_eth_rx_queue_setup(port_id_, q, num_rxdesc_, socket_id_, nullptr, mbuf_pool);
         if (ret) {
-            //RTE_LOG(ERR, DPDKCAP, "rte_eth_rx_queue_setup(...): %s\n", rte_strerror(-ret));
+            //RTE_LOG(ERR, "x", "rte_eth_rx_queue_setup(...): %s\n", rte_strerror(-ret));
             return ret;
         }
     }
@@ -130,11 +136,11 @@ int DpdkPort::Setup(struct rte_mempool* mbuf_pool)
     for (int q = 0; q < tx_rings_; q++) {
         ret = rte_eth_tx_queue_setup(port_id_, q, num_txdesc_, socket_id_, nullptr);
         if (ret) {
-            //RTE_LOG(ERR, DPDKCAP, "rte_eth_tx_queue_setup(...): %s\n", rte_strerror(-ret));
+            //RTE_LOG(ERR, "x", "rte_eth_tx_queue_setup(...): %s\n", rte_strerror(-ret));
             return ret;
         }
     }
-    
+
     rte_eth_promiscuous_enable(port_id_);
 
     return 0;

@@ -8,5 +8,8 @@
 #include "rte_mempool.h"
 #include "rte_eal.h"
 #include "rte_lcore.h"
+#include "rte_errno.h"
+#include "rte_log.h"
+
 
 #endif
