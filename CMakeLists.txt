@@ -22,7 +22,9 @@ set (DPDK_LIBS
   )
 
 add_subdirectory (cap)
+add_subdirectory (base)
+add_subdirectory (pcap)
 
 add_executable (fa main.cc)
 target_link_libraries(${PRJ} ${DPDK_LIBS})
-target_link_libraries (fa facap)
+target_link_libraries (fa facap pcap fapcap)

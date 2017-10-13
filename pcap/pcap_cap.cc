@@ -13,7 +13,9 @@ PcapCap::PcapCap(const char* if_name)
 
 PcapCap::~PcapCap()
 {
-
+    if (handle_) {
+        pcap_close(handle_);
+    }
 }
 
 int PcapCap::Open()
